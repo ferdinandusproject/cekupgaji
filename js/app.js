@@ -1,4 +1,4 @@
-/* CEKUP-GAJI v3.0.0 · build 6176c76838 — dibangkitkan oleh build.py dari src/js/*.js */
+/* CEKUP-GAJI v3.2.0 · build 32ace98f05 — dibangkitkan oleh build.py dari src/js/*.js */
 'use strict';
 
 const $ = (s, el) => (el || document).querySelector(s);
@@ -64,7 +64,7 @@ const Store = (() => {
 const API = {
   url: (typeof GAS_URL === 'string' ? GAS_URL : '').trim(),
   get ok() { return /^https?:\x2F\x2F.+/i.test(this.url) && !/XXXX|GANTI|PASTE/i.test(this.url); },
-  READ: /^(bootstrap|poll|dashboard|notif\.list|profil\.get|pegawai\.(index|list|detail)|pengajuan\.(list|detail)|persetujuan\.antrean|gaji\.(periode|get|rekap)|kelola\.akun|config\.get|laporan\.data|dokumen\.get|crm\.(list|interaksi)|blast\.(list|hitung)|antrian\.list|notif\.config|rahasia\.status)$/,
+  READ: /^(bootstrap|poll|dashboard|notif\.list|profil\.get|pegawai\.(index|list|detail)|pengajuan\.(list|detail)|persetujuan\.antrean|gaji\.(periode|get|rekap)|kelola\.akun|config\.get|laporan\.data|dokumen\.get|crm\.(list|interaksi)|blast\.(list|hitung)|antrian\.list|notif\.config|rahasia\.status|pantau\.(ringkas|audit|arsipDaftar|arsipPratinjau))$/,
   NOBATCH: /^(bootstrap|dokumen\.get|laporan\.data|crm\.list)$/,
   inflight: new Map(), epoch: 0, q: [], qT: null, stat: [],
   async post(body, opt) {
@@ -391,6 +391,7 @@ const ROUTES = {
   gaji: { label: 'Rincian Gaji', icon: 'receipt_long', group: 'ADMINISTRASI', roles: SA, sub: [['input', 'Input Manual'], ['import', 'Import Gaji']] },
   crm: { label: 'CRM & Blast WA', icon: 'campaign', group: 'ADMINISTRASI', roles: SA, sub: [['kontak', 'Kontak'], ['blast', 'Blast WhatsApp'], ['antrean', 'Antrean Pesan']] },
   pengaturan: { label: 'Pengaturan', icon: 'settings', group: 'ADMINISTRASI', roles: SA, sub: [['umum', 'Umum & Sistem'], ['notifikasi', 'Notifikasi WA & Email'], ['migrasi', 'Migrasi Data']] },
+  pantau: { label: 'Pantau Database', icon: 'monitoring', group: 'ADMINISTRASI', roles: SA, sub: [['kapasitas', 'Kapasitas & Limit'], ['audit', 'Audit Log'], ['arsip', 'Arsip Data']] },
   laporan: { label: 'Laporan / Export', icon: 'download', group: 'LAINNYA', roles: ADM },
   password: { label: 'Ubah Password', icon: 'lock_reset', group: 'LAINNYA', roles: ALL },
   bantuan: { label: 'Pusat Bantuan', icon: 'support_agent', group: 'LAINNYA', roles: ALL, ext: true }
@@ -3336,3 +3337,222 @@ ACT.aqMuat = () => Sync.run('Memuat antrean…', PAGES.crm.antrean(true));
 ACT.aqUlang = () => Modal.confirm({ title: 'Ulangi pesan gagal?', icon: 'replay', msg: 'Semua pesan berstatus Gagal dijadwalkan ulang (percobaan direset).', ok: 'Ulangi' }).then((ok) => { if (!ok) return; Sync.run('Menjadwalkan ulang…', API.call('antrian.ulang', { semua: true })).then((r) => { PAGES.crm.aq = r; PAGES.crm.antrean(); toast('ok', r.diulang + ' pesan dijadwalkan ulang'); }).catch((e) => errToast(e)); });
 
 init();
+
+const PT_IC = { kapasitas: 'monitoring', audit: 'policy', arsip: 'inventory_2' };
+const PT_LV = { aman: ['b-ok', 'check_circle', 'Aman', '--chart-4'], waspada: ['b-warn', 'warning', 'Waspada', '--chart-6'], kritis: ['b-bad', 'error', 'Kritis', '--chart-5'] };
+function fmtByte(b) {
+  b = +b || 0;
+  const f = (v, d) => v.toLocaleString('id-ID', { maximumFractionDigits: d });
+  return b >= 1e9 ? f(b / 1e9, 2) + ' GB' : b >= 1e6 ? f(b / 1e6, 1) + ' MB' : b >= 1e3 ? f(b / 1e3, 0) + ' KB' : fmtNum(b) + ' B';
+}
+const ptPct = (v) => (+v || 0).toLocaleString('id-ID', { maximumFractionDigits: (+v || 0) < 10 ? 1 : 0 }) + '%';
+const ptLv = (lv) => { const x = PT_LV[lv] || PT_LV.aman; return `<span class="badge ${x[0]}">${ic(x[1])}${x[2]}</span>`; };
+const ptAksi = (a) => String(a || '').toLowerCase().split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+const ptAksiTone = (a) => /HAPUS|TOLAK|NONAKTIF|DIHENTIKAN/.test(a) ? 'b-bad' : /ARSIP|MIGRASI/.test(a) ? 'b-pri' : /RESET|DARURAT|RAHASIA|LAMBAT/.test(a) ? 'b-warn' : /SETUJU|TAMBAH|SELESAI/.test(a) ? 'b-ok' : 'b-mut';
+
+PAGES.pantau = {
+  tab: 'kapasitas', d: null, au: null, af: { q: '', aksi: '', peran: '', dari: '', sampai: '' }, apage: 1,
+  ar: null, pv: null, pilih: '', running: false, prog: null,
+  show(p) {
+    p = p || {};
+    this.tab = ['kapasitas', 'audit', 'arsip'].indexOf(p.tab) >= 0 ? p.tab : 'kapasitas';
+    if (p.arsip) { this.pilih = p.arsip; this.pv = null; }
+    $('#pg-pantau').innerHTML = pageHead(['Administrasi', 'Pantau Database'], 'Pantau Database', 'Kapasitas & limit Supabase paket gratis, jejak aktivitas (audit log), dan pemindahan data lama ke arsip Google Drive.')
+      + `<div class="tabs mb-16">${ROUTES.pantau.sub.map((s) => `<button class="tab ${s[0] === this.tab ? 'on' : ''}" data-act="nav" data-r="pantau" data-tab="${s[0]}">${ic(PT_IC[s[0]], 's16')}${s[1]}</button>`).join('')}</div><div data-pt-body></div>`;
+    this.done = true;
+    if (this.tab === 'audit') this.audit(); else if (this.tab === 'arsip') this.arsip(); else this.kapasitas();
+  },
+  body() { return $('[data-pt-body]'); },
+  aktif(tab) { return S.route === 'pantau' && this.tab === tab; },
+
+  async kapasitas(segar) {
+    const box = this.body();
+    if (!this.d || segar) {
+      if (!this.d) box.innerHTML = `<div class="grid">${[1, 2, 3].map(() => '<div class="g-4"><div class="skel" style="height:230px;border-radius:14px"></div></div>').join('')}</div><div class="card mt-16">${skelRows(6, 40)}</div>`;
+      try { this.d = await API.call('pantau.ringkas', segar ? { segar: true } : {}, { retry: 1 }); }
+      catch (e) { box.innerHTML = `<div class="card">${emptyBox('Data kapasitas gagal dimuat', e.message, 'error')}</div>`; return; }
+      if (!this.aktif('kapasitas')) return;
+      if (segar && this.d.dibatasi) toast('info', 'Baru saja diperbarui', 'Angka kapasitas dapat disegarkan lagi 1 menit setelah pembaruan terakhir.');
+    }
+    const d = this.d, db = d.db, eg = d.egress, dt = d.detak, lim = d.limit;
+    const terburuk = [db.level, eg.level].indexOf('kritis') >= 0 ? 'kritis' : [db.level, eg.level].indexOf('waspada') >= 0 ? 'waspada' : 'aman';
+    const ring = (pct, lv, isi) => Chart.ring(Math.min(100, pct), { size: 128, thick: 13, c: PT_LV[lv][3], center: isi });
+    const detakTelat = dt.jam === null || dt.jam > dt.interval * 2 || dt.galat;
+    const maxB = Math.max(1, ...d.tabel.map((t) => t.byte));
+    const egMax = Math.max(1, ...eg.harian.map((x) => x.keluar));
+    const pr = d.prediksi;
+    const prTeks = !pr.cukup ? 'Perkiraan muncul setelah ≥ 3 hari pencatatan ukuran database (otomatis setiap 12 jam).'
+      : pr.perHari <= 0 ? 'Ukuran database stabil atau menurun dalam ' + pr.hari + ' hari terakhir — tidak ada risiko penuh dalam waktu dekat.'
+        : `Tumbuh ±${fmtByte(pr.perHari)}/hari (${pr.hari} hari terakhir) → batas ${fmtByte(lim.db)} tercapai ±<b>${pr.sisaHari > 730 ? Math.round(pr.sisaHari / 365) + ' tahun' : pr.sisaHari > 60 ? Math.round(pr.sisaHari / 30) + ' bulan' : fmtNum(pr.sisaHari) + ' hari'}</b> lagi.`;
+    box.innerHTML = `${terburuk !== 'aman' ? `<div class="banner ${terburuk === 'kritis' ? 'bad' : 'warn'}" style="margin-bottom:16px">${ic(terburuk === 'kritis' ? 'error' : 'warning')}<div class="grow"><b>Kapasitas ${terburuk === 'kritis' ? 'hampir penuh' : 'mendekati batas'} paket gratis</b><p>Database ${ptPct(db.persen)} · egress bulan ini ${ptPct(eg.persen)}. Pindahkan data lama ke arsip Google Drive agar aplikasi tetap lancar.</p></div><button class="btn btn-sm ${terburuk === 'kritis' ? 'btn-danger' : 'btn-outline'}" data-act="nav" data-r="pantau" data-tab="arsip">${ic('inventory_2', 's16')}Buka Arsip Data</button></div>` : ''}
+      ${!d.live ? `<div class="banner info" style="margin-bottom:16px">${ic('info')}<div><b>Masa peralihan</b><p>Detak anti-jeda dan pencatatan harian mulai berjalan otomatis setelah Web App versi Supabase dibuka pertama kali.</p></div></div>` : ''}
+      <div class="grid">
+        <div class="g-4"><div class="card" style="height:100%"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('database', 's18')}</span>Ukuran Database</div>${ptLv(db.level)}</div>
+          <div class="row gap-12" style="align-items:center">${ring(db.persen, db.level, `<div class="kpi sm">${ptPct(db.persen)}</div><div class="caps" style="font-size:9.5px">terpakai</div>`)}
+          <div class="grow" style="min-width:0"><div class="kpi sm">${fmtByte(db.byte)}</div><div class="muted" style="font-size:12.5px">dari ${fmtByte(lim.db)} (paket gratis)</div>
+          <div class="faint mt-12" style="font-size:11.5px">Data aplikasi ${fmtByte(db.app)}${db.wal !== null ? ` · WAL ${fmtByte(db.wal)}` : ''}<br>Angka nyata dari PostgreSQL</div></div></div></div></div>
+        <div class="g-4"><div class="card" style="height:100%"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('cloud_download', 's18')}</span>Egress Bulan Ini</div>${ptLv(eg.level)}</div>
+          <div class="row gap-12" style="align-items:center">${ring(eg.persen, eg.level, `<div class="kpi sm">${ptPct(eg.persen)}</div><div class="caps" style="font-size:9.5px">terpakai</div>`)}
+          <div class="grow" style="min-width:0"><div class="kpi sm">${fmtByte(eg.bulan)}</div><div class="muted" style="font-size:12.5px">dari ${fmtByte(lim.egress)} / bulan</div>
+          <div class="faint mt-12" style="font-size:11.5px">Hari ini ${fmtByte(eg.hariIni.keluar)} · ${fmtNum(eg.hariIni.n)} panggilan<br>30 hari ${fmtByte(eg.hari30)} · perkiraan server</div></div></div></div></div>
+        <div class="g-4"><div class="card" style="height:100%"><div class="card-h"><div class="card-t"><span class="card-ic ${detakTelat ? 'warn' : 'ok'}">${ic('monitor_heart', 's18')}</span>Anti-Jeda Otomatis</div>${detakTelat ? `<span class="badge b-warn">${ic('warning')}Periksa</span>` : `<span class="badge b-ok">${ic('check_circle')}Aktif</span>`}</div>
+          <div class="kpi sm">${dt.terakhir ? esc(relWaktu(dt.terakhir)) : 'Belum ada detak'}</div>
+          <p class="muted" style="font-size:12.5px;margin-top:4px">Detak terakhir${dt.n ? ' · ke-' + fmtNum(dt.n) : ''}. Server menulis 1 baris kecil ke database setiap ${dt.interval} jam, jauh di bawah batas jeda 7 hari.</p>
+          ${dt.galat ? `<p class="faint mt-12" style="font-size:11.5px;color:var(--danger)">${ic('error', 's14')} ${esc(dt.galat)}</p>` : ''}
+          <button class="btn btn-outline btn-sm mt-12" data-act="ptDetak">${ic('favorite', 's16')}Kirim detak sekarang</button></div></div>
+      </div>
+      <div class="grid mt-16">
+        <div class="g-7"><div class="card" style="height:100%"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('trending_up', 's18')}</span>Perkiraan Penuh</div></div>
+          <p style="font-size:13.5px">${prTeks}</p>
+          <div class="caps mt-16" style="font-size:10.5px">Egress harian · 30 hari</div>
+          <div role="img" aria-label="Grafik egress harian 30 hari" style="display:flex;align-items:flex-end;gap:2px;height:72px;margin-top:8px">${eg.harian.map((x) => `<div title="${esc(fmtTgl(x.h, true) + ': ' + fmtByte(x.keluar) + ' · ' + x.n + ' panggilan')}" style="flex:1;min-width:2px;border-radius:3px 3px 0 0;background:var(--chart-1);opacity:${x.keluar ? 1 : 0.25};height:${Math.max(3, Math.round(x.keluar / egMax * 100))}%"></div>`).join('')}</div>
+          <div class="row between faint" style="font-size:11px;margin-top:4px"><span>${fmtTgl(eg.harian[0].h, true)}</span><span>hari ini</span></div></div></div>
+        <div class="g-5"><div class="card" style="height:100%"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('info', 's18')}</span>Batas Paket Gratis</div></div>
+          <div class="kv"><div><dt>Database</dt><dd>${fmtByte(lim.db)}</dd></div><div><dt>Egress / bulan</dt><dd>${fmtByte(lim.egress)}</dd></div><div><dt>Disk (baca-saja di 95%)</dt><dd>${fmtByte(lim.disk)}</dd></div><div><dt>Tidak aktif → dijeda</dt><dd>7 hari</dd></div></div>
+          <p class="faint mt-12" style="font-size:11.5px">Angka resmi & periode tagihan ada di dasbor Supabase. Egress di sini diukur dari respons yang diterima server aplikasi (sebelum kompresi), jadi cenderung sedikit lebih tinggi.</p>
+          <div class="row wrap mt-12" style="gap:8px">${d.dasbor ? `<a class="btn btn-outline btn-sm" href="${esc(d.dasbor)}" target="_blank" rel="noopener">${ic('open_in_new', 's16')}Dasbor proyek</a>` : ''}<a class="btn btn-outline btn-sm" href="${esc(d.pemakaianResmi)}" target="_blank" rel="noopener">${ic('open_in_new', 's16')}Pemakaian resmi</a></div></div></div>
+      </div>
+      <div class="card mt-16"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('table_chart', 's18')}</span>Ukuran per Tabel</div><span class="faint" style="font-size:12px">Diperbarui ${esc(relWaktu(d.diambil))} · <button class="link-btn" data-act="ptSegar">Segarkan</button></span></div>
+        <div class="tbl-wrap responsive"><table class="tbl compact"><thead><tr><th>Tabel</th><th style="text-align:right">Baris</th><th style="min-width:200px">Ukuran (data + indeks)</th><th style="text-align:right">Indeks</th><th></th></tr></thead><tbody>${d.tabel.map((t) => `<tr>
+          <td><b style="font-weight:600">${esc(t.nama)}</b></td><td style="text-align:right">${fmtNum(t.baris)}</td>
+          <td><div class="row" style="align-items:center;gap:8px"><div class="meter grow"><i style="width:${Math.max(2, t.byte / maxB * 100)}%;background:var(--chart-1)"></i></div><span style="font-size:12px;white-space:nowrap">${fmtByte(t.byte)}</span></div></td>
+          <td style="text-align:right;font-size:12px" class="muted">${fmtByte(t.indeks)}</td>
+          <td style="text-align:right">${t.arsip ? `<button class="btn btn-outline btn-sm" data-act="ptKeArsip" data-k="${esc(t.key)}">${ic('inventory_2', 's16')}Arsipkan</button>` : '<span class="faint" style="font-size:11.5px">data inti</span>'}</td></tr>`).join('')}</tbody></table></div>
+        <div class="cards-list">${d.tabel.map((t) => `<div class="li-card"><div class="row between" style="gap:8px"><b class="truncate">${esc(t.nama)}</b><span style="font-size:12px;white-space:nowrap">${fmtByte(t.byte)}</span></div><div class="meter"><i style="width:${Math.max(2, t.byte / maxB * 100)}%;background:var(--chart-1)"></i></div><div class="row between"><small class="muted">${fmtNum(t.baris)} baris · indeks ${fmtByte(t.indeks)}</small>${t.arsip ? `<button class="btn btn-outline btn-sm" data-act="ptKeArsip" data-k="${esc(t.key)}">${ic('inventory_2', 's16')}Arsipkan</button>` : '<small class="faint">data inti</small>'}</div></div>`).join('')}</div>
+        <p class="faint mt-12" style="font-size:11.5px">${ic('info', 's14')} Tabel inti (pegawai, akun, riwayat SK, keluarga, master, pengaturan) tidak dapat diarsipkan karena dipakai aturan bisnis.</p></div>`;
+  },
+
+  formAudit() {
+    const f = this.af, aksi = this.au ? Object.keys(this.au.aksi || {}).sort() : [];
+    this.body().innerHTML = `<form class="card filter" data-submit="ptAuCari" novalidate>
+        <div class="field" style="grid-column:span 3"><label for="pa-q">Cari</label><div class="input-ic">${ic('search')}<input class="input" id="pa-q" name="q" value="${esc(f.q)}" placeholder="Pelaku, target, ringkasan" maxlength="80" autocomplete="off"></div></div>
+        <div class="field" style="grid-column:span 3"><label for="pa-a">Aksi</label><select class="select" id="pa-a" name="aksi"><option value="">Semua aksi</option>${aksi.map((a) => `<option value="${esc(a)}" ${a === f.aksi ? 'selected' : ''}>${esc(ptAksi(a))} (${fmtNum(this.au.aksi[a])})</option>`).join('')}</select></div>
+        <div class="field" style="grid-column:span 2"><label for="pa-p">Peran</label><select class="select" id="pa-p" name="peran">${[['', 'Semua peran'], ['SUPERADMIN', 'Superadmin'], ['ADMIN_UNIT', 'Admin Unit'], ['PEGAWAI', 'Pegawai'], ['SISTEM', 'Sistem']].map((x) => `<option value="${x[0]}" ${x[0] === f.peran ? 'selected' : ''}>${x[1]}</option>`).join('')}</select></div>
+        <div class="field" style="grid-column:span 2"><label for="pa-d">Dari tanggal</label><input class="input" type="date" id="pa-d" name="dari" value="${esc(f.dari)}" max="${todayYmd()}"></div>
+        <div class="field" style="grid-column:span 2"><label for="pa-s">Sampai tanggal</label><input class="input" type="date" id="pa-s" name="sampai" value="${esc(f.sampai)}" max="${todayYmd()}"></div>
+        <div class="fa"><span class="info" data-pa-info></span><div class="btns row"><button type="button" class="btn btn-outline" data-act="ptAuReset">${ic('filter_alt_off', 's18')}Reset</button><button class="btn btn-primary">${ic('search', 's18')}Cari</button></div></div>
+      </form><div class="card mt-16" data-pt-au></div>`;
+  },
+
+  async audit(muat) {
+    if (!muat || !$('[data-pt-au]')) this.formAudit();
+    if (this.au && !muat) { this.renderAudit(); return; }
+    const list = $('[data-pt-au]'), pertama = !this.au;
+    list.innerHTML = skelRows(8, 40);
+    try { this.au = await API.call('pantau.audit', Object.assign({ page: this.apage, size: 50 }, this.af), { retry: 1 }); }
+    catch (e) { list.innerHTML = emptyBox('Audit log gagal dimuat', e.message, 'error'); return; }
+    if (!this.aktif('audit')) return;
+    if (pertama) this.formAudit();
+    this.renderAudit();
+  },
+  renderAudit() {
+    const list = $('[data-pt-au]'); if (!list || !this.au) return;
+    const a = this.au, rows = a.rows;
+    const info = $('[data-pa-info]'); if (info) info.innerHTML = `${ic('policy', 's16')} ${fmtNum(a.total)} entri`;
+    list.innerHTML = rows.length ? `<div class="row between wrap mb-12" style="gap:8px"><span class="faint" style="font-size:12px">${ic('info', 's14')} Terbaru di atas. Entri lebih dari 90 hari dapat dipindah ke arsip Google Drive.</span><button class="btn btn-outline btn-sm" data-act="ptAuUnduh">${ic('download', 's16')}Unduh halaman ini (.xlsx)</button></div>
+      <div class="tbl-wrap responsive"><table class="tbl compact"><thead><tr><th>Waktu</th><th>Pelaku</th><th>Aksi</th><th>Target</th><th>Ringkasan</th></tr></thead><tbody>${rows.map((r) => `<tr>
+        <td style="white-space:nowrap;font-size:12px">${fmtWaktu(r.Waktu)}</td>
+        <td style="min-width:120px"><b style="font-weight:600;font-size:13px">${esc(r.Pelaku || '—')}</b><div class="faint" style="font-size:11px">${esc(r.Peran || '')}</div></td>
+        <td><span class="badge ${ptAksiTone(r.Aksi)}">${esc(ptAksi(r.Aksi))}</span></td>
+        <td class="mono" style="font-size:11.5px;word-break:break-all;max-width:170px">${esc(r.Target || '—')}</td>
+        <td style="min-width:240px;font-size:12.5px" class="muted">${esc(String(r.Ringkasan || '').slice(0, 220))}${String(r.Ringkasan || '').length > 220 ? '…' : ''}</td></tr>`).join('')}</tbody></table></div>
+      <div class="cards-list">${rows.map((r) => `<div class="li-card"><div class="row between top" style="gap:8px"><div style="min-width:0"><b class="truncate" style="display:block">${esc(r.Pelaku || '—')}</b><small class="muted">${fmtWaktu(r.Waktu)} · ${esc(r.Peran || '')}</small></div><span class="badge ${ptAksiTone(r.Aksi)}">${esc(ptAksi(r.Aksi))}</span></div>${r.Target ? `<small class="mono faint" style="word-break:break-all">${esc(r.Target)}</small>` : ''}<p class="muted" style="font-size:12px">${esc(String(r.Ringkasan || '').slice(0, 160))}</p></div>`).join('')}</div>
+      ${pager(a.total, a.page, a.size, 'ptAuPage')}` : emptyBox('Tidak ada entri', 'Ubah filter atau rentang tanggal.', 'search_off');
+  },
+
+  async arsip(muat) {
+    const box = this.body();
+    if (!this.ar || muat) {
+      if (!this.ar) box.innerHTML = `<div class="card">${skelRows(6, 44)}</div>`;
+      try { this.ar = await API.call('pantau.arsipDaftar', {}, { retry: 1 }); }
+      catch (e) { box.innerHTML = `<div class="card">${emptyBox('Data arsip gagal dimuat', e.message, 'error')}</div>`; return; }
+      if (!this.aktif('arsip')) return;
+    }
+    const ar = this.ar, job = ar.job;
+    const t = ar.tabel.find((x) => x.key === this.pilih) || ar.tabel[0];
+    this.pilih = t.key;
+    const pv = this.pv && this.pv.tabel === t.key ? this.pv : null;
+    box.innerHTML = `${job && !this.running ? `<div class="banner warn" style="margin-bottom:16px">${ic('pending')}<div class="grow"><b>Arsip ${esc(job.label)} belum selesai</b><p>${fmtNum(job.n)} dari ${fmtNum(job.total)} baris sudah dipindah (dimulai ${esc(relWaktu(job.mulai))} oleh ${esc(job.oleh)}). Data yang belum terarsip tetap aman di Supabase.</p></div><div class="row wrap" style="gap:8px"><button class="btn btn-outline btn-sm" data-act="ptArHenti">${ic('stop_circle', 's16')}Hentikan</button><button class="btn btn-primary btn-sm" data-act="ptArLanjut">${ic('play_arrow', 's16')}Lanjutkan</button></div></div>` : ''}
+      <div class="grid">
+        <div class="g-7"><div class="card" style="height:100%"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('inventory_2', 's18')}</span>Pindahkan Data Lama ke Arsip</div></div>
+          <form class="filter" data-submit="ptArPratinjau" novalidate>
+            <div class="field" style="grid-column:span 7"><label for="ar-t">Data</label><select class="select" id="ar-t" name="tabel" data-change="ptArTabel" ${this.running ? 'disabled' : ''}>${ar.tabel.map((x) => `<option value="${x.key}" ${x.key === t.key ? 'selected' : ''}>${esc(x.label)} · min. ${x.minHari >= 365 ? Math.round(x.minHari / 365) + ' tahun' : x.minHari + ' hari'}</option>`).join('')}</select></div>
+            <div class="field" style="grid-column:span 5"><label for="ar-s">${t.bulan ? 'Periode sebelum' : 'Data sebelum tanggal'}</label><input class="input" type="${t.bulan ? 'month' : 'date'}" id="ar-s" name="sampai" value="${esc(pv ? pv.sampai : t.maks)}" max="${esc(t.maks)}" ${this.running ? 'disabled' : ''}></div>
+            <div class="fa"><span class="info">${ic('lock', 's16')} Paling akhir: ${esc(t.bulan ? t.maks : fmtTgl(t.maks, true))}</span><div class="btns row"><button class="btn btn-outline" ${this.running ? 'disabled' : ''}>${ic('manage_search', 's18')}Pratinjau</button></div></div>
+          </form>
+          <div data-ar-hasil class="mt-16">${this.running && this.prog ? this.progHtml() : pv ? this.pvHtml(pv) : `<p class="faint" style="font-size:12.5px">Pilih data & batas tanggal, lalu tekan <b>Pratinjau</b>. Belum ada data yang berubah.</p>`}</div></div></div>
+        <div class="g-5"><div class="card" style="height:100%"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('help', 's18')}</span>Cara Kerja</div></div>
+          <ol class="stack-8" style="margin:0;padding-left:18px;font-size:12.5px;color:var(--text-2)">
+            <li>Baris lama disalin ke <b>Google Spreadsheet baru</b> di folder Drive <b>Arsip Database (Supabase)</b> — gratis, di akun Google Anda.</li>
+            <li>Setiap batch diverifikasi di spreadsheet dulu, <b>baru</b> dihapus dari Supabase. Bila koneksi putus, tekan Lanjutkan — tidak ada baris ganda.</li>
+            <li>Arsip ${ar.tabel.filter((x) => x.pulih).length ? 'Audit Log, Notifikasi, Log Import, Pengajuan & Rincian Gaji' : ''} dapat dipulihkan kapan saja lewat <button class="link-btn" data-act="nav" data-r="pengaturan" data-tab="migrasi">Pengaturan → Migrasi Data</button> (tempel URL spreadsheet arsip).</li>
+            <li>Ruang yang dibebaskan langsung dipakai ulang oleh data baru; angka ukuran di dasbor turun bertahap setelah <i>autovacuum</i>.</li>
+          </ol></div></div>
+      </div>
+      <div class="card mt-16"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('history', 's18')}</span>Riwayat Arsip</div></div>${ar.riwayat.length ? `<div class="tbl-wrap responsive"><table class="tbl compact"><thead><tr><th>Selesai</th><th>Data</th><th>Sebelum</th><th style="text-align:right">Baris</th><th>Status</th><th></th></tr></thead><tbody>${ar.riwayat.map((r) => `<tr><td style="white-space:nowrap;font-size:12px">${fmtWaktu(r.selesai)}<div class="faint">${esc(r.oleh || '')}</div></td><td>${esc(r.label)}</td><td>${esc(r.sampai)}</td><td style="text-align:right">${fmtNum(r.n)}</td><td>${r.status === 'Selesai' ? `<span class="badge b-ok">${ic('check_circle')}Selesai</span>` : `<span class="badge b-mut">${ic('stop_circle')}Dihentikan</span>`}</td><td style="text-align:right">${r.url ? `<a class="btn btn-outline btn-sm" href="${esc(r.url)}" target="_blank" rel="noopener">${ic('open_in_new', 's16')}Buka arsip</a>` : ''}</td></tr>`).join('')}</tbody></table></div>
+        <div class="cards-list">${ar.riwayat.map((r) => `<div class="li-card"><div class="row between top" style="gap:8px"><div style="min-width:0"><b class="truncate" style="display:block">${esc(r.label)}</b><small class="muted">sebelum ${esc(r.sampai)} · ${fmtNum(r.n)} baris · ${fmtWaktu(r.selesai)}</small></div>${r.status === 'Selesai' ? `<span class="badge b-ok">Selesai</span>` : `<span class="badge b-mut">Dihentikan</span>`}</div>${r.url ? `<a class="btn btn-outline btn-sm" href="${esc(r.url)}" target="_blank" rel="noopener">${ic('open_in_new', 's16')}Buka arsip</a>` : ''}</div>`).join('')}</div>` : emptyBox('Belum ada arsip', 'Riwayat pemindahan data akan tampil di sini.', 'inventory_2')}</div>`;
+  },
+  pvHtml(pv) {
+    return `<div class="kv c3"><div><dt>Baris dipindah</dt><dd>${fmtNum(pv.n)}</dd></div><div><dt>Perkiraan ukuran</dt><dd>${fmtByte(pv.byte)}</dd></div><div><dt>Rentang</dt><dd style="font-size:12.5px">${pv.n ? esc(String(pv.min).slice(0, 10)) + ' – ' + esc(String(pv.max).slice(0, 10)) : '—'}</dd></div></div>
+      ${pv.n ? `<div class="row between wrap mt-12" style="gap:8px"><span class="faint" style="font-size:12px">${pv.pulih ? ic('restore', 's14') + ' Dapat dipulihkan lewat Migrasi Data.' : ic('info', 's14') + ' Hanya disimpan sebagai arsip (tidak dipulihkan ke aplikasi).'}</span><button class="btn btn-danger btn-sm" data-act="ptArJalan">${ic('inventory_2', 's16')}Arsipkan ${fmtNum(pv.n)} baris</button></div>` : `<p class="faint mt-12" style="font-size:12.5px">Tidak ada data ${esc(pv.label)} sebelum batas ini.</p>`}`;
+  },
+  progHtml() {
+    const p = this.prog || {}, pct = p.total ? Math.min(100, p.n / p.total * 100) : 0;
+    return `<div class="row between" style="gap:8px"><b style="font-size:13px"><span class="spin"></span> Memindahkan ${esc(p.label || '')}…</b><span class="muted" style="font-size:12.5px">${fmtNum(p.n || 0)} / ${fmtNum(p.total || 0)} baris</span></div>
+      <div class="meter mt-12" style="height:8px"><i style="width:${pct}%;background:var(--chart-4)"></i></div>
+      <p class="faint mt-12" style="font-size:12px">${ic('info', 's14')} Berjalan per batch. Halaman boleh ditinggal; bila koneksi putus, lanjutkan dari menu ini tanpa data ganda.</p>`;
+  },
+  async jalan(payload) {
+    if (this.running) return;
+    this.running = true;
+    const ar = this.ar || {}, t = (ar.tabel || []).find((x) => x.key === (payload.tabel || (ar.job && ar.job.tabel))) || {};
+    this.prog = { label: t.label || (ar.job && ar.job.label), n: (ar.job && ar.job.n) || 0, total: (ar.job && ar.job.total) || (this.pv && this.pv.n) || 0 };
+    if (this.aktif('arsip')) this.arsip();
+    let r = null;
+    try {
+      for (let i = 0; i < 2000; i++) {
+        r = await API.call('pantau.arsipJalankan', payload, { timeout: 90000 });
+        payload = {};
+        Object.assign(this.prog, { n: r.n, total: r.total || this.prog.total, label: r.label || this.prog.label });
+        const h = $('[data-ar-hasil]'); if (h && this.aktif('arsip')) h.innerHTML = this.progHtml();
+        if (r.selesai) break;
+      }
+      toast('ok', 'Arsip selesai', fmtNum(r.n) + ' baris ' + r.label + ' dipindah ke Google Drive.' + (r.pulih ? ' Dapat dipulihkan lewat Migrasi Data.' : ''));
+    } catch (e) { errToast(e, 'Arsip terhenti — data aman, tekan Lanjutkan'); }
+    this.running = false; this.prog = null; this.pv = null; this.d = null;
+    if (this.aktif('arsip')) this.arsip(true);
+  }
+};
+
+ACT.ptSegar = () => Sync.run('Memperbarui kapasitas…', PAGES.pantau.kapasitas(true));
+ACT.ptDetak = (el) => { el.disabled = true; Sync.run('Mengirim detak…', API.call('pantau.detak', {})).then((d) => { PAGES.pantau.d = d; toast('ok', 'Detak terkirim', 'Database Supabase tercatat aktif.'); if (PAGES.pantau.aktif('kapasitas')) PAGES.pantau.kapasitas(); }).catch((e) => { el.disabled = false; errToast(e, 'Detak gagal'); }); };
+ACT.ptKeArsip = (el) => go('pantau', { tab: 'arsip', arsip: el.dataset.k });
+SUBMIT.ptAuCari = (f) => { const g = (n) => String(f.elements[n].value || '').trim(); const P = PAGES.pantau; Object.assign(P.af, { q: g('q'), aksi: g('aksi'), peran: g('peran'), dari: g('dari'), sampai: g('sampai') }); if (P.af.dari && P.af.sampai && P.af.dari > P.af.sampai) return toast('warn', 'Rentang tanggal terbalik', '"Dari" harus sebelum "Sampai".'); P.apage = 1; P.audit(true); };
+ACT.ptAuReset = () => { const P = PAGES.pantau; P.af = { q: '', aksi: '', peran: '', dari: '', sampai: '' }; P.apage = 1; P.formAudit(); P.audit(true); };
+ACT.ptAuPage = (el) => { const P = PAGES.pantau; P.apage = Math.max(1, +el.dataset.p); P.audit(true).then(() => { const l = $('[data-pt-au]'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); };
+ACT.ptAuUnduh = async () => {
+  const a = PAGES.pantau.au; if (!a || !a.rows.length) return;
+  try {
+    await loadLib('xlsx');
+    const H = ['Waktu', 'Pelaku', 'Peran', 'Aksi', 'Target', 'Ringkasan'];
+    const ws = XLSX.utils.aoa_to_sheet([H].concat(a.rows.map((r) => H.map((h) => String(r[h] || '')))));
+    await unduhXlsx([{ name: 'Audit_Log', ws }], 'Audit_Log_hal-' + a.page + '_' + todayYmd() + '.xlsx');
+  } catch (e) { errToast(e, 'Unduhan gagal'); }
+};
+CHG.ptArTabel = (el) => { const P = PAGES.pantau; P.pilih = el.value; P.pv = null; P.arsip(); };
+SUBMIT.ptArPratinjau = (f) => {
+  const P = PAGES.pantau, tabel = f.elements.tabel.value, sampai = String(f.elements.sampai.value || '').trim();
+  if (!sampai) return toast('warn', 'Isi batas tanggal');
+  const h = $('[data-ar-hasil]'); if (h) h.innerHTML = skelRows(2, 40);
+  API.call('pantau.arsipPratinjau', { tabel, sampai }).then((pv) => { P.pv = pv; if (P.aktif('arsip')) { const x = $('[data-ar-hasil]'); if (x) x.innerHTML = P.pvHtml(pv); } }).catch((e) => { if (h) h.innerHTML = `<div class="banner bad">${ic('error')}<div><b>Tidak dapat dipratinjau</b><p>${esc(e.message)}</p></div></div>`; });
+};
+ACT.ptArJalan = () => {
+  const P = PAGES.pantau, pv = P.pv; if (!pv || !pv.n) return;
+  Modal.confirm({ title: 'Pindahkan ke arsip?', icon: 'inventory_2', danger: true, size: 'sm',
+    msg: `<b>${fmtNum(pv.n)} baris ${esc(pv.label)}</b> sebelum <b>${esc(pv.sampai)}</b> akan disalin ke spreadsheet arsip di Google Drive, lalu <b>dihapus dari Supabase</b>.${pv.pulih ? ' Data dapat dipulihkan lewat Pengaturan → Migrasi Data.' : ' Data ini tidak dipulihkan ke aplikasi (hanya arsip).'}`,
+    input: { label: 'Ketik ARSIPKAN untuk melanjutkan', placeholder: 'ARSIPKAN', required: true, match: 'ARSIPKAN', matchMsg: 'Ketik ARSIPKAN (huruf kapital).' }, ok: 'Arsipkan' })
+    .then((v) => { if (v) P.jalan({ tabel: pv.tabel, sampai: pv.sampai, konfirmasi: v }); });
+};
+ACT.ptArLanjut = () => PAGES.pantau.jalan({});
+ACT.ptArHenti = () => Modal.confirm({ title: 'Hentikan arsip?', icon: 'stop_circle', msg: 'Baris yang sudah tersalin tetap di arsip & dihapus dari Supabase; sisanya tetap di Supabase. Arsip dapat dimulai lagi kapan saja.', ok: 'Hentikan' })
+  .then((ok) => { if (!ok) return; Sync.run('Menghentikan arsip…', API.call('pantau.arsipHentikan', {})).then((r) => { toast('ok', 'Arsip dihentikan', fmtNum(r.n) + ' baris sudah terarsip.'); PAGES.pantau.arsip(true); }).catch((e) => errToast(e)); });
