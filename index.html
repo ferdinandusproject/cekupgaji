@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1A1F4D">
+  <meta name="color-scheme" content="light dark">
+  <title>CEKUP-GAJI · Dinkes Minsel</title>
+  <meta name="description" content="CEKUP-GAJI — Cek Rutin, Update Cepat, Gaji Tepat. Sistem Informasi Cek &amp; Update Data Penggajian ASN Dinas Kesehatan Kabupaten Minahasa Selatan.">
+  <meta name="robots" content="noindex">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CEKUP-GAJI">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&icon_names=account_balance,account_balance_wallet,account_circle,add,add_card,add_circle,admin_panel_settings,alarm,antrean,apartment,arrow_back,arrow_forward,auto_awesome,bad,badge,bar_chart,block,bolt,build,cake,calendar_month,call,campaign,cancel,chat,check,check_circle,checklist,chevron_left,chevron_right,child_care,close,cloud_done,cloud_upload,construction,contacts,content_copy,contrast,dark_mode,dashboard,delete,delete_forever,description,devices,domain,donut_large,download,dragover,drop,edit,edit_document,edit_note,elderly,encrypted,error,event_available,event_busy,event_upcoming,expand_more,fact_check,family_restroom,favorite,filter_alt_off,forum,forward_to_inbox,full,functions,gavel,group,group_add,groups,headset_mic,help,history,hourglass_top,how_to_reg,inbox,info,insights,install_mobile,instansi,ios_share,key,light_mode,list,list_alt,lock,lock_reset,logout,mail,manage_accounts,manage_search,mark_email_read,mark_email_unread,menu,merge,military_tech,monitor_heart,move_down,move_up,notifications,notifications_active,notifications_off,ok,open_in_new,payments,pending,pending_actions,person,person_add,person_off,person_search,picture_as_pdf,pie_chart,play_arrow,print,priority_high,queue,radio_button_unchecked,receipt_long,refresh,remove_circle,replay,restart_alt,route,rule,save,schedule,school,search,search_off,send,sentiment_sad,settings,settings_suggest,shield,shield_lock,shield_person,stop,stop_circle,summarize,support_agent,sync,table_view,task_alt,timer,tips_and_updates,touch_app,touchstart,trending_down,trending_up,tune,upload_file,verified,verified_user,visibility,visibility_off,warn,warning,work,zoom_in,zoom_out&display=block" rel="stylesheet" onerror="this.onerror=null;this.href='https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=block'">
+  <!-- Terapkan tema sebelum render pertama (tanpa kedip) -->
+  <script>
+    (function () { try { var t = localStorage.getItem('pg:tema'); if (!t) t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'gelap' : 'terang'; document.documentElement.setAttribute('data-theme', t === 'gelap' ? 'dark' : 'light'); } catch (e) { } })();
+  </script>
+  <style>
+    /* CSS kritis (layar pembuka) — tampil sebelum css/style.css selesai dimuat. */
+    html, body { height: 100%; margin: 0; }
+    body { font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #1A1F4D; color: #14183F; }
+    html[data-theme="dark"] body { background: #070A1C; }
+    [hidden] { display: none !important; }
+    .ms { font-family: 'Material Symbols Outlined'; font-weight: 400; font-style: normal; font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block; white-space: nowrap; direction: ltr; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; }
+    .ms.s32 { font-size: 32px; }
+    .splash { position: fixed; inset: 0; display: grid; place-items: center; z-index: 999; background: inherit; color: #EAF0FF; transition: opacity .25s; }
+    .splash.hide { opacity: 0; pointer-events: none; }
+    .splash .logo-mark { width: 64px; height: 64px; border-radius: 18px; background: #12163A; color: #FFDEA4; border: 1px solid rgba(255, 255, 255, .14); display: grid; place-items: center; margin: 0 auto 14px; }
+    .splash .bar { width: 160px; height: 6px; border-radius: 6px; background: #263266; overflow: hidden; margin: 18px auto 0; }
+    .splash .bar::after { content: ''; display: block; width: 40%; height: 100%; background: #FFC857; border-radius: 6px; animation: slide 1s infinite cubic-bezier(.2, .7, .2, 1); }
+    @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+    .splash-err { margin: 18px auto 0; max-width: 320px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, .10); font-size: 13px; line-height: 1.5; }
+    .splash-err button { margin-top: 10px; border: 0; border-radius: 999px; min-height: 44px; padding: 0 20px; background: #FFC857; color: #1A1F4D; font: inherit; font-weight: 700; cursor: pointer; }
+    @media (prefers-reduced-motion: reduce) { .splash .bar::after { animation: none; } }
+  </style>
+  <!-- Stylesheet lengkap SETELAH CSS kritis → token tema (terang/gelap) selalu menang -->
+  <link rel="stylesheet" href="./css/style.css?v=6176c76838">
+</head>
+<body>
+  <!-- Splash: tampil sampai JS siap (biasanya < 300 ms) -->
+  <div class="splash" id="splash" role="status" aria-label="Memuat aplikasi">
+    <div style="text-align:center">
+      <div class="logo-mark"><span class="ms s32">account_balance_wallet</span></div>
+      <div style="font-weight:800;font-size:20px;letter-spacing:-.02em">CEKUP-GAJI</div>
+      <div style="opacity:.75;font-size:12px;margin-top:2px">Dinas Kesehatan Kab. Minahasa Selatan</div>
+      <div class="bar" id="splash-bar"></div>
+      <div class="splash-err" id="splash-err" hidden role="alert"><div id="splash-err-t">Aplikasi gagal dimuat.</div><button type="button" onclick="location.reload()">Coba Lagi</button></div>
+    </div>
+  </div>
+
+  <!-- ===================== LOGIN ===================== -->
+  <div class="login" id="view-login" hidden>
+    <div class="login-wrap">
+      <div class="login-card" id="login-card">
+        <form class="login-form" id="login-form" autocomplete="on" novalidate>
+          <div class="lf-head">
+            <div class="row gap-12" style="min-width:0">
+              <div class="lf-mark"><span class="ms s24">account_balance_wallet</span></div>
+              <div style="min-width:0">
+                <div class="row" style="gap:6px"><b class="lf-name" data-bind="appName">CEKUP-GAJI</b><span class="ver-chip">v<span data-bind="versi">2.1.2</span></span></div>
+                <small class="lf-inst" data-bind="instansi">Dinas Kesehatan Kabupaten Minahasa Selatan</small>
+              </div>
+            </div>
+            <div class="seg seg-sm" role="group" aria-label="Tema tampilan">
+              <button type="button" data-act="tema" data-v="terang" aria-label="Mode terang"><span class="ms s16">light_mode</span><span>Terang</span></button>
+              <button type="button" data-act="tema" data-v="gelap" aria-label="Mode gelap"><span class="ms s16">dark_mode</span><span>Gelap</span></button>
+            </div>
+          </div>
+          <div class="lf-title">
+            <div class="caps lf-kicker">Cek &amp; Update Gaji</div>
+            <h1>Masuk ke Sistem</h1>
+            <p>Selamat datang di <b>CEKUP-GAJI</b> — Sistem Informasi Cek &amp; Update Data Penggajian ASN Dinas Kesehatan. Pastikan data kepegawaian Anda selalu mutakhir untuk penggajian yang tepat waktu dan akurat.</p>
+          </div>
+          <div>
+            <div class="flabel" style="margin-bottom:8px">Pilih Peran Pengguna</div>
+            <div class="role-seg" role="tablist" aria-label="Jenis akun">
+              <button type="button" class="on" data-act="loginRole" data-v="pegawai" role="tab"><span class="ms s18">badge</span><b>Pegawai (NIP)</b><small>NIP 18 digit</small></button>
+              <button type="button" data-act="loginRole" data-v="admin" role="tab"><span class="ms s18">admin_panel_settings</span><b>Admin / Superadmin</b><small>Username resmi</small></button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="row between"><label for="lg-user" id="lg-user-lbl">NIP <span class="req">*</span></label></div>
+            <div class="input-ic"><span class="ms">badge</span><input class="input" id="lg-user" name="username" autocomplete="username" inputmode="numeric" placeholder="18 digit NIP" required></div>
+            <div class="fhint" id="lg-user-hint">Contoh: 198804152014022003</div>
+          </div>
+          <div class="field">
+            <div class="row between"><label for="lg-pass" class="flabel">Password <span class="req">*</span></label><a class="link-btn" data-wa-forgot target="_blank" rel="noopener" style="padding:0;min-height:0">Lupa password?</a></div>
+            <div class="pw-wrap input-ic"><span class="ms">lock</span><input class="input" id="lg-pass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required><button type="button" class="icon-btn eye" data-act="togglePw" data-t="lg-pass" aria-label="Tampilkan password"><span class="ms s18">visibility</span></button></div>
+          </div>
+          <div class="row between wrap" style="gap:8px">
+            <label class="check"><input type="checkbox" id="lg-remember"> Ingat sesi di perangkat ini</label>
+            <span class="lf-secure"><i></i>Koneksi terenkripsi</span>
+          </div>
+          <div class="banner bad" id="lg-err" hidden><span class="ms">error</span><div id="lg-err-t"></div></div>
+          <button class="btn btn-primary btn-block lf-submit" type="submit" id="lg-btn"><span>Masuk</span><span class="ms s18">arrow_forward</span></button>
+          <div class="lf-notice" role="note"><span class="ms">event_upcoming</span><div><span class="caps">Sudah Cekup Data Bulan Ini?</span><p>Laporkan perubahan SK KGB, Pangkat, Jabatan atau Tunjangan Keluarga sebelum batas waktu tutup buku bulanan.</p></div></div>
+          <div class="login-foot">
+            <div class="lf-hash"><span class="ms s18">encrypted</span>Password ter-hash HMAC-SHA256 iteratif + salt</div>
+            <button type="button" class="btn btn-soft btn-block" data-act="pwa" data-pwa-btn hidden><span class="ms s18">install_mobile</span>Pasang Aplikasi di HP</button>
+            <div class="row between wrap" style="gap:6px"><span>© <span id="yr"></span> <span data-bind="instansi">Dinas Kesehatan Kabupaten Minahasa Selatan</span></span><span class="row" style="gap:10px"><button type="button" class="link-btn" data-act="tentang">Tentang CEKUP-GAJI</button><a class="link-btn" data-wa target="_blank" rel="noopener">Helpdesk WA</a></span></div>
+          </div>
+        </form>
+        <aside class="login-info" aria-label="Tentang aplikasi">
+          <div class="li-glow a"></div><div class="li-glow b"></div>
+          <div class="li-top">
+            <span class="li-badge"><i></i><b>Portal Resmi Cek &amp; Update Data Gaji</b><span>Kab. Minsel</span></span>
+            <span class="li-status"><span class="ms s16">shield_lock</span>Akses Berjenjang</span>
+          </div>
+          <div class="li-hero">
+            <div class="li-kicker">CEKUP-GAJI · Cek &amp; Update Gaji</div>
+            <h2>Cek Rutin, Update Cepat, Gaji Tepat.</h2>
+            <p>Seperti <i>medical check-up</i> yang mendeteksi gangguan sejak dini, CEKUP-GAJI memeriksa dan memperbarui setiap perubahan data kepegawaian sebelum periode penggajian berjalan — agar hak keuangan ASN terbayar akurat, transparan, dan tepat waktu.</p>
+            <button type="button" class="li-link" data-act="tentang"><span class="ms s16">info</span>Baca filosofi CEKUP-GAJI</button>
+            <div class="li-feats">
+              <div class="li-feat"><div><div class="li-ic"><span class="ms">gavel</span></div><b>Tertelusur ke Nomor SK</b><p>Setiap perubahan pangkat, jabatan, KGB, dan unit kerja wajib berdasar SK.</p></div><div class="li-ff"><span>Validasi Berjenjang</span><span class="ms s16 ok">task_alt</span></div></div>
+              <div class="li-feat"><div><div class="li-ic warn"><span class="ms">notifications_active</span></div><div class="row" style="gap:6px;align-items:flex-start"><b>Peringatan Dini Tunjangan Anak</b><span class="li-chip">H-90</span></div><p>Alert otomatis H-90 &amp; H-30 sebelum anak berusia 21 tahun.</p></div><div class="li-ff"><span>Cegah Lebih Bayar</span><span class="ms s16 warn">warning</span></div></div>
+              <div class="li-feat"><div><div class="li-ic ok"><span class="ms">shield_lock</span></div><b>Aman &amp; Berjenjang</b><p>Password ter-hash + salt, akses sesuai peran, dokumen tidak publik.</p></div><div class="li-ff"><span>Akses Sesuai Peran</span><span class="ms s16 info">verified_user</span></div></div>
+            </div>
+          </div>
+          <div class="li-bottom">
+            <div class="li-metrics">
+              <div><span class="caps">Kategori Perubahan</span><div class="li-num">7<small>Jenis</small></div><span class="li-cap">Data diri hingga riwayat cuti</span></div>
+              <div><span class="caps">Peringatan Dini</span><div class="li-num ok">H-90</div><span class="li-cap">Sebelum anak berusia 21 tahun</span></div>
+              <div><span class="caps">Hak Akses</span><div class="li-num">3<small>Peran</small></div><span class="li-cap">Superadmin, Admin Unit, Pegawai</span></div>
+            </div>
+            <div class="li-help"><span class="row" style="gap:8px"><span class="ms s18">headset_mic</span>Kendala NIP / Gaji? Hubungi Pusat Bantuan.</span><a data-wa target="_blank" rel="noopener">WhatsApp<span class="ms s14">open_in_new</span></a></div>
+          </div>
+        </aside>
+      </div>
+      <div class="setup-err" id="setup-err" hidden>
+        <div class="banner warn"><span class="ms">construction</span><div><b>Aplikasi belum siap</b><p id="setup-err-t"></p></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== APLIKASI (L-frame navy) ===================== -->
+  <div class="frame" id="view-app" hidden>
+    <header class="topbar">
+      <button class="icon-btn hamb" data-act="drawer" aria-label="Buka menu"><span class="ms">menu</span></button>
+      <div class="brand">
+        <div class="brand-mark" id="brand-mark"><span class="ms">account_balance_wallet</span></div>
+        <div class="brand-text"><b data-bind="appName">CEKUP-GAJI</b><span>Dinkes Kab. Minsel</span></div>
+      </div>
+      <div class="greet"><small id="greet-t">Selamat datang</small><b id="greet-n">—</b></div>
+      <form class="top-search" id="top-search" role="search">
+        <input id="q-global" type="search" placeholder="Cari NIP atau nama…" autocomplete="off" aria-label="Pencarian cepat">
+        <button type="submit" class="ts-go" aria-label="Cari"><span class="ms s18">search</span></button>
+        <button type="button" class="ts-x" data-act="searchToggle" aria-label="Tutup pencarian"><span class="ms s18">close</span></button>
+      </form>
+      <div class="top-actions">
+        <button class="icon-btn search-toggle" data-act="searchToggle" aria-label="Cari"><span class="ms">search</span></button>
+        <a class="icon-btn hide-sm" data-wa target="_blank" rel="noopener" aria-label="Pusat Bantuan WhatsApp" title="Pusat Bantuan"><span class="ms">support_agent</span></a>
+        <button class="icon-btn hide-sm" data-act="temaToggle" id="tema-btn" aria-label="Ganti ke mode gelap" title="Ganti tema"><span class="ms">dark_mode</span></button>
+        <div style="position:relative">
+          <button class="icon-btn" data-act="notif" aria-label="Notifikasi" id="bell"><span class="ms">notifications</span><span class="dot" id="bell-dot" hidden></span></button>
+        </div>
+        <div style="position:relative">
+          <button class="me" data-act="meMenu" aria-label="Menu akun"><span class="av sm" id="me-av">—</span><span class="who"><b id="me-n">—</b><small id="me-r">—</small></span><span class="ms s18 who">expand_more</span></button>
+        </div>
+      </div>
+    </header>
+    <div class="shell">
+      <div class="sb-slot">
+        <aside class="sidebar" id="sidebar" aria-label="Menu utama">
+          <div class="sb-head">
+            <div class="brand-mark"><span class="ms">account_balance_wallet</span></div>
+            <div class="brand-text"><b data-bind="appName">CEKUP-GAJI</b><span>Dinkes Kab. Minsel</span></div>
+          </div>
+          <nav class="nav" id="nav"></nav>
+          <div class="sb-foot">
+            <div class="sb-profile">
+              <span class="av" id="sb-av">—</span>
+              <div class="sb-who"><b id="sb-n">—</b><small id="sb-r">—</small></div>
+            </div>
+            <div class="sb-row">
+              <div class="seg seg-sm" role="group" aria-label="Tema tampilan">
+                <button type="button" data-act="tema" data-v="terang" aria-label="Mode terang" title="Mode terang"><span class="ms s16">light_mode</span><span>Terang</span></button>
+                <button type="button" data-act="tema" data-v="gelap" aria-label="Mode gelap" title="Mode gelap"><span class="ms s16">dark_mode</span><span>Gelap</span></button>
+              </div>
+              <button type="button" class="sb-logout" data-act="logout" title="Keluar"><span class="ms s18">logout</span><span class="lbl">Keluar</span></button>
+            </div>
+            <div class="sb-ver">v<span data-bind="versi">2.1.2</span></div>
+          </div>
+        </aside>
+      </div>
+      <div class="main">
+        <main class="content" id="content">
+          <section class="page" id="pg-dashboard"></section>
+          <section class="page" id="pg-profil"></section>
+          <section class="page" id="pg-cekgaji"></section>
+          <section class="page" id="pg-ajukan"></section>
+          <section class="page" id="pg-riwayat"></section>
+          <section class="page" id="pg-pegawai"></section>
+          <section class="page" id="pg-persetujuan"></section>
+          <section class="page" id="pg-kelola"></section>
+          <section class="page" id="pg-gaji"></section>
+          <section class="page" id="pg-laporan"></section>
+          <section class="page" id="pg-password"></section>
+          <section class="page" id="pg-crm"></section>
+          <section class="page" id="pg-pengaturan"></section>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <div id="layer"></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="tip" id="tip" role="tooltip"></div>
+  <div class="sync-pill hide" id="sync"><span class="spin" style="width:12px;height:12px"></span><span id="sync-t">Menyinkronkan…</span></div>
+
+  <!-- Satu-satunya konfigurasi frontend: GAS_URL (URL Web App Apps Script /exec). Tanpa rahasia. -->
+  <script src="./js/config.js?v=6176c76838"></script>
+  <script src="./js/app.js?v=6176c76838" defer></script>
+  <script>
+    /* Pengaman: bila skrip aplikasi gagal dimuat (jaringan putus / berkas hilang), tampilkan tombol Coba Lagi. */
+    setTimeout(function () { if (!window.__PG_SIAP) { var e = document.getElementById('splash-err'), b = document.getElementById('splash-bar'); if (e && document.getElementById('splash')) { e.hidden = false; if (b) b.hidden = true; } } }, 12000);
+  </script>
+</body>
+</html>

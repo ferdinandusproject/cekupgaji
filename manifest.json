@@ -1,0 +1,64 @@
+{
+  "name": "CEKUP-GAJI · Cek & Update Gaji",
+  "short_name": "CEKUP-GAJI",
+  "description": "Cek Rutin, Update Cepat, Gaji Tepat. Sistem Informasi Cek & Update Data Penggajian ASN Dinas Kesehatan Kabupaten Minahasa Selatan",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "background_color": "#1A1F4D",
+  "theme_color": "#1A1F4D",
+  "lang": "id",
+  "categories": [
+    "business",
+    "finance",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Cek Gaji",
+      "url": "./index.html#/cekgaji",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Ajukan Perubahan",
+      "url": "./index.html#/ajukan",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
