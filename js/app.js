@@ -1,4 +1,4 @@
-/* CEKUP-GAJI v3.2.0 · build 32ace98f05 — dibangkitkan oleh build.py dari src/js/*.js */
+/* CEKUP-GAJI v3.2.0 · build c280de4202 — dibangkitkan oleh build.py dari src/js/*.js */
 'use strict';
 
 const $ = (s, el) => (el || document).querySelector(s);
@@ -213,8 +213,10 @@ const Drawer = {
     this.close();
     const lay = $('#layer');
     const scrim = document.createElement('div'); scrim.className = 'scrim'; scrim.style.zIndex = 94;
-    const d = document.createElement('aside'); d.className = 'drawer'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
-    d.innerHTML = `<div class="drawer-h"><button class="icon-btn" data-x aria-label="Tutup">${ic('arrow_back')}</button><div class="grow"><b style="font-size:15px">${o.title || ''}</b>${o.sub ? `<div class="muted" style="font-size:12px">${o.sub}</div>` : ''}</div>${o.actions || ''}</div><div class="drawer-b">${o.body || ''}</div>`;
+
+    const d = document.createElement('aside'); d.className = 'drawer' + (o.center ? ' center' : ''); d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+    const tx = `<button class="icon-btn" data-x aria-label="Tutup">${ic(o.center ? 'close' : 'arrow_back')}</button>`, tj = `<div class="grow"><b style="font-size:15px">${o.title || ''}</b>${o.sub ? `<div class="muted" style="font-size:12px">${o.sub}</div>` : ''}</div>${o.actions || ''}`;
+    d.innerHTML = `<div class="drawer-h">${o.center ? tj + tx : tx + tj}</div><div class="drawer-b">${o.body || ''}</div>`;
     lay.appendChild(scrim); lay.appendChild(d);
     const dr = { el: d, body: d.querySelector('.drawer-b'), close: () => { scrim.remove(); d.remove(); if (Drawer.cur === dr) Drawer.cur = null; if (o.onClose) o.onClose(); } };
     scrim.onclick = dr.close; d.querySelector('[data-x]').onclick = dr.close;
@@ -347,7 +349,7 @@ const Theme = {
     document.documentElement.setAttribute('data-theme', t === 'gelap' ? 'dark' : 'light');
     Store.pref('pg:tema', t);
     $$('[data-act="tema"]').forEach((b) => b.classList.toggle('on', b.dataset.v === t));
-    const mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.content = t === 'gelap' ? '#070A1C' : '#1A1F4D';
+    const mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.content = '#070A1C';
     const tb = document.getElementById('tema-btn'); if (tb) { tb.querySelector('.ms').textContent = t === 'gelap' ? 'light_mode' : 'dark_mode'; tb.setAttribute('aria-label', t === 'gelap' ? 'Ganti ke mode terang' : 'Ganti ke mode gelap'); }
     if (simpanServer && S.token) API.call('tema.set', { tema: t }).catch(() => { });
   }
@@ -2025,7 +2027,7 @@ async function bukaDetailPegawai(nip, tab) {
   const aksi = isSA()
     ? `<button class="btn btn-sm btn-outline" data-act="pgReset" data-nip="${esc(nip)}" title="Reset password ke NIP">${ic('lock_reset', 's18')}<span class="hide-sm">Reset Password</span></button><button class="btn btn-sm btn-danger-o btn-ic" data-act="pgHapus" data-nip="${esc(nip)}" aria-label="Hapus pegawai" title="Hapus permanen">${ic('delete', 's18')}</button>`
     : `<button class="btn btn-sm btn-primary" data-act="nav" data-r="ajukan" data-p='${JSON.stringify({ nip })}'>${ic('edit_document', 's18')}<span class="hide-sm">Ajukan Perubahan</span></button>`;
-  const dr = Drawer.open({ title: esc(p.Nama), sub: 'NIP ' + fmtNip(nip) + (isSA() ? ' · mode edit langsung' : ' · hanya-baca'), actions: aksi, body: `<div class="card">${skelRows(1, 120)}</div><div class="mt-16">${skelRows(4, 60)}</div>` });
+  const dr = Drawer.open({ center: true, title: esc(p.Nama), sub: 'NIP ' + fmtNip(nip) + (isSA() ? ' · mode edit langsung' : ' · hanya-baca'), actions: aksi, body: `<div class="card">${skelRows(1, 120)}</div><div class="mt-16">${skelRows(4, 60)}</div>` });
   const render = (d) => { if (Drawer.cur !== dr) return; const cur = dr.body.querySelector('[data-detail]'); if (cur) Detail.refresh(nip); else dr.body.innerHTML = Detail.html(d, { sa: isSA(), tab }); };
   if (S.detail[nip]) render(S.detail[nip]);
   try { const d = await fetchDetail(nip); render(d); }
