@@ -7,7 +7,7 @@
    • Font & pustaka CDN berversi: cache dulu (tidak berubah).
    Nama cache otomatis berganti setiap build → versi lama dibersihkan.
    ===================================================================== */
-const CACHE_NAME = 'cekup-gaji-v3.2.0-7aad5d58e8';
+const CACHE_NAME = 'cekup-gaji-v3.2.1-7f14f5fb63';
 const RUNTIME = 'cekup-gaji-runtime-v1';
 const STATIC_ASSETS = ['./', './index.html', './css/style.css', './js/app.js', './js/config.js', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png'];

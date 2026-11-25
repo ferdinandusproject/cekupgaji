@@ -1,4 +1,4 @@
-/* CEKUP-GAJI v3.2.0 · build 7aad5d58e8 — dibangkitkan oleh build.py dari src/js/*.js */
+/* CEKUP-GAJI v3.2.1 · build 7f14f5fb63 — dibangkitkan oleh build.py dari src/js/*.js */
 'use strict';
 
 const $ = (s, el) => (el || document).querySelector(s);
@@ -1229,6 +1229,7 @@ const FS = {
     { k: 'Nama', l: 'Nama Lengkap', t: 'text', req: 1, max: 120, span: 2 },
     { k: 'NIK', l: 'NIK', t: 'text', re: /^\d{16}$/, msg: 'NIK harus 16 digit angka.', im: 'numeric', max: 16, ph: '16 digit' },
     { k: 'JenisKelamin', l: 'Jenis Kelamin', t: 'select', opts: ['Laki-laki', 'Perempuan'] },
+    { k: 'TanggalLahir', l: 'Tanggal Lahir', t: 'date', lahir: 1 },
     { k: 'NoTelepon', l: 'No. Telepon / WhatsApp', t: 'tel', re: /^[0-9+\-\s]{8,18}$/, msg: 'Nomor telepon tidak valid.', ph: '08…' },
     { k: 'Email', l: 'Email (untuk notifikasi)', t: 'email', re: RE_EMAIL, msg: 'Format email tidak valid.', ph: 'nama@contoh.id' },
     { k: 'Alamat', l: 'Alamat', t: 'textarea', span: 'full', max: 300 }
@@ -1239,7 +1240,7 @@ const FS = {
   ],
   PANGKAT: [
     { k: 'Golongan', l: 'Pangkat / Golongan', t: 'gol', req: 1 },
-    { k: 'MasaKerja', l: 'Masa Kerja Golongan', t: 'text', ph: 'mis. 10 Thn 0 Bln', max: 40 },
+    { k: 'MasaKerja', l: 'Masa Kerja Golongan', t: 'mk', hint: 'Isi tahun dan bulan — mis. tepat 2 tahun: 2 Tahun + 0 Bulan.' },
     { k: 'TglDitetapkan', l: 'Tanggal Ditetapkan', t: 'date', req: 1 },
     { k: 'TglBerlaku', l: 'Tanggal Berlaku (TMT)', t: 'date', req: 1 },
     { k: 'NomorSK', l: 'Nomor SK', t: 'sk', req: 1, max: 120 },
@@ -1252,7 +1253,7 @@ const FS = {
     { k: 'NomorSK', l: 'Nomor SK', t: 'sk', req: 1, max: 120, span: 2 }
   ],
   KGB: [
-    { k: 'MasaKerja', l: 'Masa Kerja Baru', t: 'text', req: 1, ph: 'mis. 12 Thn 0 Bln', max: 40 },
+    { k: 'MasaKerja', l: 'Masa Kerja Baru', t: 'mk', req: 1, hint: 'Isi tahun dan bulan — mis. tepat 2 tahun: 2 Tahun + 0 Bulan.' },
     { k: 'GajiPokok', l: 'Gaji Pokok Baru (Rp)', t: 'money', req: 1 },
     { k: 'TglDitetapkan', l: 'Tanggal Penetapan', t: 'date', req: 1 },
     { k: 'TglBerlaku', l: 'Tanggal Berlaku', t: 'date', req: 1 },
@@ -1281,6 +1282,13 @@ function golOptions(val) {
 }
 const unitOptions = (val, kosong) => `<option value="">${esc(kosong || '— Pilih unit kerja —')}</option>` + S.master.unit.map((u) => `<option ${u === val ? 'selected' : ''}>${esc(u)}</option>`).join('');
 const optList = (opts, val, kosong) => `<option value="">${esc(kosong || '— Pilih —')}</option>` + (typeof opts === 'function' ? opts() : opts).map((o) => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('');
+
+function mkParse(v) {
+  const s = String(v || '').trim().toLowerCase(), RT = /(\d{1,2})\s*(?:tahun|thn|th|t)\b/, RB = /(\d{1,2})\s*(?:bulan|bln|bl|b)\b/;
+  const t = s.match(RT), b = s.match(RB);
+  if (!s || (!t && !b) || s.replace(RT, '').replace(RB, '').replace(/dan|[\s,.;:\-\x2F&]/g, '') || (t && +t[1] > 50) || (b && +b[1] > 11)) return { th: '', bl: '' };
+  return { th: String(t ? +t[1] : 0), bl: String(b ? +b[1] : 0) };
+}
 const moneyFmt = (v) => (v === '' || v === null || v === undefined || isNaN(+v)) ? '' : Math.round(+v).toLocaleString('id-ID');
 
 function fieldHtml(f, val, pfx) {
@@ -1293,7 +1301,8 @@ function fieldHtml(f, val, pfx) {
     case 'gol': inp = `<select class="select" id="${id}" name="${f.k}">${golOptions(v)}</select>`; break;
     case 'unit': inp = `<select class="select" id="${id}" name="${f.k}">${unitOptions(v)}</select>`; break;
     case 'textarea': inp = `<textarea class="textarea" id="${id}" name="${f.k}" maxlength="${f.max || 300}" placeholder="${esc(f.ph || '')}">${esc(v)}</textarea>`; break;
-    case 'date': inp = `<input class="input" type="date" id="${id}" name="${f.k}" value="${esc(String(v).slice(0, 10))}" max="2100-12-31">`; break;
+    case 'date': inp = `<input class="input" type="date" id="${id}" name="${f.k}" value="${esc(String(v).slice(0, 10))}" max="${f.lahir ? todayYmd() : '2100-12-31'}">`; break;
+    case 'mk': { const m = mkParse(v); inp = `<div class="mk-grp"><div class="mk-sfx"><input class="input num" id="${id}" name="${f.k}__th" inputmode="numeric" maxlength="2" data-input="mkTh" value="${esc(m.th)}" autocomplete="off" aria-label="${esc(f.l)} (tahun)"><span>Tahun</span></div><select class="select" name="${f.k}__bl" aria-label="${esc(f.l)} (bulan)"><option value="">— Bulan —</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i}" ${m.bl === String(i) ? 'selected' : ''}>${i} Bulan</option>`).join('')}</select></div>`; break; }
     case 'money': inp = `<div class="input-ic"><span style="position:absolute;left:12px;top:12px;font-weight:600;color:var(--text-2)">Rp</span><input class="input num" id="${id}" name="${f.k}" inputmode="numeric" data-input="money" value="${esc(moneyFmt(v))}" placeholder="0" style="padding-left:38px"></div>`; break;
     case 'sk': inp = `<div class="input-ic">${ic('gavel')}<input class="input mono" id="${id}" name="${f.k}" value="${esc(v)}" maxlength="${f.max || 120}" placeholder="mis. 821/BKPSDM-MS/SK/IV/2026" autocomplete="off"></div>`; break;
     case 'jabatan': inp = `<input class="input" id="${id}" name="${f.k}" value="${esc(v)}" maxlength="${f.max || 150}" list="dl-jabatan" placeholder="Ketik atau pilih jabatan" autocomplete="off">`; break;
@@ -1306,6 +1315,17 @@ const jabatanDatalist = () => `<datalist id="dl-jabatan">${(S.jabatanList || [])
 function readForm(root, spec) {
   const vals = {}, errs = {};
   spec.forEach((f) => {
+    if (f.t === 'mk') {
+      const w = root.querySelector(`[data-f="${f.k}"]`); if (!w) return;
+      const th = digits(w.querySelector(`[name="${f.k}__th"]`).value), bl = w.querySelector(`[name="${f.k}__bl"]`).value;
+      vals[f.k] = '';
+      if (th === '' && bl === '') { if (f.req) errs[f.k] = f.l + ' wajib diisi (tahun dan bulan).'; }
+      else if (th === '') errs[f.k] = 'Isi jumlah tahun (ketik 0 bila belum genap 1 tahun).';
+      else if (bl === '') errs[f.k] = 'Pilih jumlah bulan (pilih 0 Bulan bila tahunnya pas).';
+      else if (+th > 50) errs[f.k] = 'Jumlah tahun maksimal 50.';
+      else vals[f.k] = `${+th} Tahun ${+bl} Bulan`;
+      return;
+    }
     const el = root.querySelector(`[data-f="${f.k}"] [name="${f.k}"]`); if (!el) return;
     let v = String(el.value || '').trim();
     if (f.t === 'money') v = parseRp(v);
@@ -1313,6 +1333,7 @@ function readForm(root, spec) {
     vals[f.k] = v;
     if (f.req && (v === '' || v === null)) errs[f.k] = f.l + ' wajib diisi.';
     else if (v !== '' && f.re && !f.re.test(String(v))) errs[f.k] = f.msg || f.l + ' tidak valid.';
+    else if (v !== '' && f.lahir && v > todayYmd()) errs[f.k] = f.l + ' tidak boleh di masa depan.';
   });
   if (vals.TglMulai && vals.TglSelesai && vals.TglSelesai < vals.TglMulai) errs.TglSelesai = 'Tanggal berakhir tidak boleh sebelum tanggal mulai.';
   return { vals, errs };
@@ -1328,6 +1349,7 @@ function showErrs(root, errs, noScroll) {
   if (first && !noScroll) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); const i = first.querySelector('input,select,textarea'); if (i) setTimeout(() => i.focus({ preventScroll: true }), 250); }
   return Object.keys(errs).length;
 }
+INP.mkTh = (el) => { const d = digits(el.value).slice(0, 2); if (el.value !== d) el.value = d; };
 INP.money = (el) => { const d = digits(el.value); const pos = el.value.length - el.selectionStart; el.value = d ? Number(d).toLocaleString('id-ID') : ''; const np = Math.max(0, el.value.length - pos); try { el.setSelectionRange(np, np); } catch (e) { } };
 
 function semesterKode(kode) {
@@ -1444,7 +1466,7 @@ const Detail = {
   body(d, tab, o) {
     const p = d.pegawai, sa = o.sa;
     if (tab === 'diri') {
-      const kv = [['Nama Lengkap', p.Nama], ['NIP', fmtNip(p.NIP)], ['Status Pegawai', p.StatusPegawai], ['NIK', p.NIK], ['Jenis Kelamin', p.JenisKelamin], ['No. Telepon', p.NoTelepon], ['Email', p.Email], ['Status Keaktifan', p.StatusKeaktifan || 'Aktif'], ['Unit Kerja', p.UnitKerja], ['Pangkat/Golongan', p.Golongan ? p.Golongan + ' — ' + (p.Pangkat || '') : ''], ['Jabatan', p.Jabatan], ['Gaji Pokok Terkini', p.GajiPokok ? fmtRp(p.GajiPokok) : ''], ['Alamat', p.Alamat, 'full']];
+      const kv = [['Nama Lengkap', p.Nama], ['NIP', fmtNip(p.NIP)], ['Status Pegawai', p.StatusPegawai], ['NIK', p.NIK], ['Jenis Kelamin', p.JenisKelamin], ['Tanggal Lahir', p.TanggalLahir ? fmtTgl(p.TanggalLahir) + (usia(p.TanggalLahir) !== null ? ' (' + usia(p.TanggalLahir) + ' tahun)' : '') : ''], ['No. Telepon', p.NoTelepon], ['Email', p.Email], ['Status Keaktifan', p.StatusKeaktifan || 'Aktif'], ['Unit Kerja', p.UnitKerja], ['Pangkat/Golongan', p.Golongan ? p.Golongan + ' — ' + (p.Pangkat || '') : ''], ['Jabatan', p.Jabatan], ['Gaji Pokok Terkini', p.GajiPokok ? fmtRp(p.GajiPokok) : ''], ['Alamat', p.Alamat, 'full']];
       return `<div class="card"><div class="card-h"><div class="card-t"><span class="card-ic">${ic('badge', 's18')}</span>Data Diri</div>${sa ? `<button class="btn btn-sm btn-primary" data-act="edDiri">${ic('edit', 's18')}Edit</button>` : o.self ? `<button class="btn btn-sm btn-soft" data-act="nav" data-r="ajukan" data-p='{"jenis":"DATA_DIRI"}'>${ic('edit', 's18')}Ajukan Perubahan</button>` : ''}</div>
         <dl class="kv c3">${kv.map((x) => `<div class="${x[2] || ''}"><dt>${x[0]}</dt><dd>${x[1] ? esc(x[1]) : '<span class="faint">— belum diisi —</span>'}</dd></div>`).join('')}</dl>
         <p class="faint mt-16" style="font-size:12px">${ic('info', 's14')} Perubahan Data Diri tidak memerlukan dokumen pendukung.${p.DiperbaruiPada ? ' Terakhir diperbarui ' + fmtWaktu(p.DiperbaruiPada) + '.' : ''}</p></div>`;
@@ -1611,7 +1633,7 @@ function ringkasLokal(j, d, x) {
 }
 
 const CMP_F = {
-  DATA_DIRI: [['Nama', 'Nama Lengkap'], ['NIK', 'NIK'], ['JenisKelamin', 'Jenis Kelamin'], ['NoTelepon', 'No. Telepon'], ['Email', 'Email'], ['Alamat', 'Alamat']],
+  DATA_DIRI: [['Nama', 'Nama Lengkap'], ['NIK', 'NIK'], ['JenisKelamin', 'Jenis Kelamin'], ['TanggalLahir', 'Tanggal Lahir'], ['NoTelepon', 'No. Telepon'], ['Email', 'Email'], ['Alamat', 'Alamat']],
   PANGKAT: [['Golongan', 'Golongan'], ['Pangkat', 'Pangkat'], ['MasaKerja', 'Masa Kerja'], ['TglDitetapkan', 'Tgl Ditetapkan'], ['TglBerlaku', 'Tgl Berlaku (TMT)'], ['NomorSK', 'Nomor SK'], ['GajiPokok', 'Gaji Pokok']],
   JABATAN: [['Jabatan', 'Jabatan'], ['TglDitetapkan', 'Tgl Ditetapkan'], ['TglBerlaku', 'Tgl Berlaku'], ['NomorSK', 'Nomor SK']],
   KGB: [['MasaKerja', 'Masa Kerja'], ['GajiPokok', 'Gaji Pokok'], ['TglDitetapkan', 'Tgl Penetapan'], ['TglBerlaku', 'Tgl Berlaku'], ['NomorSK', 'Nomor SK']],
@@ -2427,6 +2449,7 @@ const TAMBAH_SPEC = [
   { k: 'UnitKerja', l: 'Unit Kerja', t: 'unit', req: 1 },
   { k: 'NIK', l: 'NIK (opsional)', t: 'text', re: /^\d{16}$/, msg: 'NIK harus 16 digit angka.', im: 'numeric', max: 16 },
   { k: 'JenisKelamin', l: 'Jenis Kelamin', t: 'select', opts: ['Laki-laki', 'Perempuan'] },
+  { k: 'TanggalLahir', l: 'Tanggal Lahir (opsional)', t: 'date', lahir: 1, hint: 'Kosongkan untuk diisi otomatis dari 8 digit pertama NIP.' },
   { k: 'Email', l: 'Email (opsional)', t: 'email', re: RE_EMAIL, msg: 'Format email tidak valid.', span: 2 }
 ];
 const ADMIN_SPEC = [
@@ -2583,8 +2606,8 @@ ACT.klTpl = async () => {
   try {
     await loadLib('xlsx');
     const H = S.master.kolomImportPegawai || [];
-    const contoh = { 'NIP': '199001012015031001', 'Nama': 'Contoh Pegawai, S.Kep., Ns.', 'Status Pegawai': 'PNS', 'NIK': '7105010101900001', 'Jenis Kelamin': 'L', 'Alamat': 'Jl. Contoh No. 1, Amurang', 'No Telepon': '081234567890', 'Email': 'contoh@email.com', 'Unit Kerja': S.master.unit[1] || S.master.unit[0], 'Status Keaktifan': 'Aktif', 'Tidak Ada Tanggungan': 'TIDAK', 'Pasangan Nama': 'Nama Pasangan', 'Pasangan Tanggal Lahir': '1991-05-20', 'Pasangan Pekerjaan': 'Wiraswasta', 'Pasangan Status ASN': 'Tidak', 'Anak1 Nama': 'Nama Anak Pertama', 'Anak1 Tanggal Lahir': '2016-08-17', 'Anak1 Pekerjaan': 'Pelajar', 'Anak1 Hubungan': 'Kandung', 'Golongan': 'III/a', 'Pangkat Masa Kerja': '10 Thn 0 Bln', 'Pangkat Tgl Ditetapkan': '2025-03-10', 'Pangkat Tgl Berlaku': '2025-04-01', 'Pangkat Gaji Pokok': 3373600, 'Pangkat Nomor SK': '821/BKPSDM/SK/III/2025', 'Jabatan': 'Perawat Ahli Pertama', 'Jabatan Tgl Ditetapkan': '2024-01-05', 'Jabatan Tgl Berlaku': '2024-01-05', 'Jabatan Nomor SK': '800/BKPSDM/I/2024', 'KGB Masa Kerja': '10 Thn 0 Bln', 'KGB Tgl Ditetapkan': '2025-03-10', 'KGB Tgl Berlaku': '2025-04-01', 'KGB Gaji Pokok': 3373600, 'KGB Nomor SK': '822/KGB/2025', 'Unit Tgl Ditetapkan': '2015-03-01', 'Unit Tgl Berlaku': '2015-03-01', 'Unit Nomor SK': '820/MUTASI/2015' };
-    const pet = [['PETUNJUK PENGISIAN IMPORT DATA PEGAWAI — ' + (S.cfg.appName || BRAND.nama)], [], ['Kolom wajib', 'NIP (18 digit, format Teks), Nama, Status Pegawai (PNS/PPPK), Unit Kerja (sesuai daftar di bawah)'], ['Jenis Kelamin', 'L / P'], ['Tanggal', 'Format tanggal Excel atau YYYY-MM-DD'], ['Pasangan Status ASN', 'Ya / Tidak — jika Ya, Pasangan NIP wajib 18 digit'], ['Anak1..Anak5 Hubungan', 'Kandung / Tiri / Angkat'], ['Tidak Ada Tanggungan', 'YA jika tidak memiliki tanggungan keluarga'], ['Riwayat & Nomor SK', 'Nomor SK boleh kosong. Bila kosong, Golongan/Jabatan/Masa Kerja disimpan sebagai data terkini dan kategori terkait tetap "Belum Lengkap" sampai dilengkapi pegawai/Admin Unit lewat Ajukan Perubahan (dengan Nomor SK & dokumen).'], ['Duplikat', 'NIP yang sudah terdaftar dilewati, kecuali dipilih "Timpa" saat pratinjau'], ['Hapus baris contoh', 'Hapus baris ke-2 (contoh) sebelum mengunggah'], [], ['DAFTAR UNIT KERJA']].concat(S.master.unit.map((u) => ['', u])).concat([[], ['DAFTAR GOLONGAN']]).concat(S.master.pangkat.map((p) => ['', p.g + ' — ' + p.p + (p.j === 'PPPK' ? ' (PPPK)' : '')]));
+    const contoh = { 'NIP': '199001012015031001', 'Nama': 'Contoh Pegawai, S.Kep., Ns.', 'Status Pegawai': 'PNS', 'NIK': '7105010101900001', 'Jenis Kelamin': 'L', 'Tanggal Lahir': '1990-01-01', 'Alamat': 'Jl. Contoh No. 1, Amurang', 'No Telepon': '081234567890', 'Email': 'contoh@email.com', 'Unit Kerja': S.master.unit[1] || S.master.unit[0], 'Status Keaktifan': 'Aktif', 'Tidak Ada Tanggungan': 'TIDAK', 'Pasangan Nama': 'Nama Pasangan', 'Pasangan Tanggal Lahir': '1991-05-20', 'Pasangan Pekerjaan': 'Wiraswasta', 'Pasangan Status ASN': 'Tidak', 'Anak1 Nama': 'Nama Anak Pertama', 'Anak1 Tanggal Lahir': '2016-08-17', 'Anak1 Pekerjaan': 'Pelajar', 'Anak1 Hubungan': 'Kandung', 'Golongan': 'III/a', 'Pangkat Masa Kerja': '10 Tahun 0 Bulan', 'Pangkat Tgl Ditetapkan': '2025-03-10', 'Pangkat Tgl Berlaku': '2025-04-01', 'Pangkat Gaji Pokok': 3373600, 'Pangkat Nomor SK': '821/BKPSDM/SK/III/2025', 'Jabatan': 'Perawat Ahli Pertama', 'Jabatan Tgl Ditetapkan': '2024-01-05', 'Jabatan Tgl Berlaku': '2024-01-05', 'Jabatan Nomor SK': '800/BKPSDM/I/2024', 'KGB Masa Kerja': '10 Tahun 0 Bulan', 'KGB Tgl Ditetapkan': '2025-03-10', 'KGB Tgl Berlaku': '2025-04-01', 'KGB Gaji Pokok': 3373600, 'KGB Nomor SK': '822/KGB/2025', 'Unit Tgl Ditetapkan': '2015-03-01', 'Unit Tgl Berlaku': '2015-03-01', 'Unit Nomor SK': '820/MUTASI/2015' };
+    const pet = [['PETUNJUK PENGISIAN IMPORT DATA PEGAWAI — ' + (S.cfg.appName || BRAND.nama)], [], ['Kolom wajib', 'NIP (18 digit, format Teks), Nama, Status Pegawai (PNS/PPPK), Unit Kerja (sesuai daftar di bawah)'], ['Jenis Kelamin', 'L / P'], ['Tanggal Lahir', 'Format tanggal Excel atau YYYY-MM-DD. Boleh dikosongkan: otomatis diambil dari 8 digit pertama NIP.'], ['Masa Kerja (Pangkat & KGB)', 'Tulis lengkap tahun dan bulan, mis. "2 Tahun 0 Bulan" atau "0 Tahun 2 Bulan". Angka saja (mis. "2") ditolak karena tidak jelas tahun atau bulan.'], ['Tanggal', 'Format tanggal Excel atau YYYY-MM-DD'], ['Pasangan Status ASN', 'Ya / Tidak — jika Ya, Pasangan NIP wajib 18 digit'], ['Anak1..Anak5 Hubungan', 'Kandung / Tiri / Angkat'], ['Tidak Ada Tanggungan', 'YA jika tidak memiliki tanggungan keluarga'], ['Riwayat & Nomor SK', 'Nomor SK boleh kosong. Bila kosong, Golongan/Jabatan/Masa Kerja disimpan sebagai data terkini dan kategori terkait tetap "Belum Lengkap" sampai dilengkapi pegawai/Admin Unit lewat Ajukan Perubahan (dengan Nomor SK & dokumen).'], ['Duplikat', 'NIP yang sudah terdaftar dilewati, kecuali dipilih "Timpa" saat pratinjau'], ['Hapus baris contoh', 'Hapus baris ke-2 (contoh) sebelum mengunggah'], [], ['DAFTAR UNIT KERJA']].concat(S.master.unit.map((u) => ['', u])).concat([[], ['DAFTAR GOLONGAN']]).concat(S.master.pangkat.map((p) => ['', p.g + ' — ' + p.p + (p.j === 'PPPK' ? ' (PPPK)' : '')]));
     await unduhXlsx([{ name: 'Data Pegawai', ws: wsTemplate(H, contoh, ['NIP', 'NIK', 'Pasangan NIP', 'No Telepon'], 300) }, { name: 'Petunjuk', ws: wsAoa(pet, [28, 90]) }], 'Template_Import_Pegawai_CEKUP-GAJI.xlsx');
   } catch (e) { errToast(e, 'Template gagal dibuat'); }
 };
