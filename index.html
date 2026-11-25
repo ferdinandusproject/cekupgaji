@@ -54,7 +54,7 @@
     @media (prefers-reduced-motion: reduce) { .splash .bar::after { animation: none; } }
   </style>
   <!-- Stylesheet lengkap SETELAH CSS kritis → token tema (terang/gelap) selalu menang -->
-  <link rel="stylesheet" href="./css/style.css?v=c280de4202">
+  <link rel="stylesheet" href="./css/style.css?v=7aad5d58e8">
 </head>
 <body>
   <!-- Splash: tampil sampai JS siap (biasanya < 300 ms) -->
@@ -230,8 +230,8 @@
   <div class="sync-pill hide" id="sync"><span class="spin" style="width:12px;height:12px"></span><span id="sync-t">Menyinkronkan…</span></div>
 
   <!-- Satu-satunya konfigurasi frontend: GAS_URL (URL Web App Apps Script /exec). Tanpa rahasia. -->
-  <script src="./js/config.js?v=c280de4202"></script>
-  <script src="./js/app.js?v=c280de4202" defer></script>
+  <script src="./js/config.js?v=7aad5d58e8"></script>
+  <script src="./js/app.js?v=7aad5d58e8" defer></script>
   <script>
     /* Pengaman: bila skrip aplikasi gagal dimuat (jaringan putus / berkas hilang), tampilkan tombol Coba Lagi. */
     setTimeout(function () { if (!window.__PG_SIAP) { var e = document.getElementById('splash-err'), b = document.getElementById('splash-bar'); if (e && document.getElementById('splash')) { e.hidden = false; if (b) b.hidden = true; } } }, 12000);
